@@ -4,7 +4,7 @@
 from typing import (
     Dict,
     Any,
-    Optional,
+    # Optional,
 )
 
 import sys
@@ -13,10 +13,13 @@ import inspect
 import re
 import tempfile
 import json
+import socket
 
 import urllib.request
 
-# queries to the iana web page terminate with 503 frequently when queying all tld's sleep and restart untill all done
+# queries to the iana web page terminate with 503 frequently ,
+# when queying all tld's sleep and restart untill all done
+
 
 class IanaRootDbWhoisExtractor:
     URL: str = "https://www.iana.org/domains/root/db"
@@ -57,12 +60,19 @@ class IanaRootDbWhoisExtractor:
         path = os.path.join(parent_dir, directory)
         os.makedirs(path)
 
-    def extractWhoisServer(self,tld: str, html: str):
+    def extractWhoisServer(self, tld: str, html: str):
         zz = re.findall(r"<b>WHOIS Server:</b> ([-\.\w]+)", str(html))
         if zz:
             whois = zz[0]
             self.domains[tld]["whois"] = whois
 
+    def verifyWhoisServer(self, tld: str):
+        whois = self.domains[tld].get("whois")
+        if whois:
+            try:
+                socket.getaddrinfo(whois, 43)
+            except Exception as e:
+                print(f"cannot connect to: {whois}, {e}", file=sys.stderr)
 
     def fetchOneRootInfo(self, tld: str) -> None:
         if self.verbose:
@@ -99,17 +109,28 @@ class IanaRootDbWhoisExtractor:
         with open(fPath, "w") as outfile:
             json.dump(self.domains[tld], outfile)
 
-    def fetchOneIanaRootDbTld(self, a:str) -> None:
+    def fetchOneIanaRootDbTld(self, a: str) -> None:
         xTld = re.search(r"/domains/root/db/([-\w]+)\.html", a)
         tld = xTld[1]
         self.domains[tld] = {"url": "https://www.iana.org" + a}
 
         pTld = os.path.join(self.BASE_CACHE_PATH, tld)
         jPath = os.path.join(pTld, f"{tld}.json")
+
         if not os.path.exists(jPath):  # if older then (48 hours + random) refresh
             self.fetchOneRootInfo(tld)
             self.writeTldJsonFile(tld)
-            print(tld, self.domains[tld].get("whois"))
+        else:
+            try:
+                with open(jPath) as f:
+                    self.domains[tld] = json.load(f)
+            except Exception as e:
+                print(f"{tld}, {jPath}, {e}", file=sys.stderr)
+                return
+
+        if self.domains[tld].get("whois"):
+            print(f"dns verify: {tld}, {self.domains[tld].get('whois')}")
+            self.verifyWhoisServer(tld)
 
     def fetchAllIanaRootDB(self) -> None:
         if self.verbose:
