@@ -60,55 +60,54 @@ class PyWhoisClient:
     MAX_READ_BUF: int = 4096
     # ----------------------------------------
     ABUSE_HOST: str = "whois.abuse.net"
-    AI_HOST: str = "whois.nic.ai"
+    # AI_HOST: str = "whois.nic.ai"
     ANIC_HOST: str = "whois.arin.net"
-    APP_HOST: str = "whois.nic.google"
-    AR_HOST: str = "whois.nic.ar"
+    # APP_HOST: str = "whois.nic.google"
+    # AR_HOST: str = "whois.nic.ar"
     BNIC_HOST: str = "whois.registro.br"
     BW_HOST: str = "whois.nic.net.bw"
     BY_HOST: str = "whois.cctld.by"
     CA_HOST: str = "whois.ca.fury.ca"
-    CHAT_HOST: str = "whois.nic.chat"
-    CL_HOST: str = "whois.nic.cl"
-    CR_HOST: str = "whois.nic.cr"
+    # CHAT_HOST: str = "whois.nic.chat"
+    # CL_HOST: str = "whois.nic.cl"
+    # CR_HOST: str = "whois.nic.cr"
     DE_HOST: str = "whois.denic.de"
     DENIC_HOST: str = "whois.denic.de"
     DETI_HOST: str = "whois.nic.xn--d1acj3b"
-    DEV_HOST: str = "whois.nic.google"
+    # DEV_HOST: str = "whois.nic.google"
     DK_HOST: str = "whois.dk-hostmaster.dk"
-    DNIC_HOST: str = "whois.nic.mil"
-    DO_HOST: str = "whois.nic.do"
-    GAMES_HOST: str = "whois.nic.games"
+    # DNIC_HOST: str = "whois.nic.mil"
+    # DO_HOST: str = "whois.nic.do"
+    # GAMES_HOST: str = "whois.nic.games"
     GDD_HOST: str = "whois.dnrs.godaddy"
-    GNIC_HOST: str = "whois.nic.gov"
-    GOOGLE_HOST: str = "whois.nic.google"
-    GROUP_HOST: str = "whois.namecheap.com"
+    # GNIC_HOST: str = "whois.nic.gov"
+    # GOOGLE_HOST: str = "whois.nic.google"
     HK_HOST: str = "whois.hkirc.hk"
-    HN_HOST: str = "whois.nic.hn"
+    # HN_HOST: str = "whois.nic.hn"
     HR_HOST: str = "whois.dns.hr"
-    IANA_HOST: str = "whois.iana.org" # <<=
+    IANA_HOST: str = "whois.iana.org"  # <<=
     IDS_HOST: str = "whois.identitydigital.services"
     INIC_HOST: str = "whois.networksolutions.com"
     IST_HOST: str = "whois.afilias-srs.net"
-    JOBS_HOST: str = "whois.nic.jobs"
+    # JOBS_HOST: str = "whois.nic.jobs"
     JP_HOST: str = "whois.jprs.jp"
-    KZ_HOST: str = "whois.nic.kz"
-    LAT_HOST: str = "whois.nic.lat"
-    LI_HOST: str = "whois.nic.li"
+    # KZ_HOST: str = "whois.nic.kz"
+    # LAT_HOST: str = "whois.nic.lat"
+    # LI_HOST: str = "whois.nic.li"
     LNIC_HOST: str = "whois.lacnic.net"
     LT_HOST: str = "whois.domreg.lt"
-    MARKET_HOST: str = "whois.nic.market"
+    # MARKET_HOST: str = "whois.nic.market"
     MNIC_HOST: str = "whois.ra.net"
-    MONEY_HOST: str = "whois.nic.money"
+    # MONEY_HOST: str = "whois.nic.money"
     MOSKVA_HOST: str = "whois.registry.nic.xn--80adxhks"
     MX_HOST: str = "whois.mx"
     NG_HOST: str = "whois.nic.net.ng"
     NIC_HOST: str = "whois.crsnic.net"
     NL_HOST: str = "whois.domain-registry.nl"
     NORID_HOST: str = "whois.norid.no"
-    ONLINE_HOST: str = "whois.nic.online"
-    OOO_HOST: str = "whois.nic.ooo"
-    PAGE_HOST: str = "whois.nic.page"
+    # ONLINE_HOST: str = "whois.nic.online"
+    # OOO_HOST: str = "whois.nic.ooo"
+    # PAGE_HOST: str = "whois.nic.page"
     PANDI_HOST: str = "whois.pandi.or.id"
     PE_HOST: str = "kero.yachay.pe"
     PIR_HOST: str = "whois.publicinterestregistry.org"
@@ -117,12 +116,12 @@ class PyWhoisClient:
     RF_HOST: str = "whois.registry.tcinet.ru"
     RNIC_HOST: str = "whois.ripe.net"
     RU_HOST: str = "whois.nic.ru"
-    SHOP_HOST: str = "whois.nic.shop"
+    # SHOP_HOST: str = "whois.nic.shop"
     SNIC_HOST: str = "whois.6bone.net"
     STORE_HOST: str = "whois.centralnic.com"
     TN_HOST: str = "whois.ati.tn"
     UKR_HOST: str = "whois.dotukr.com"
-    WEBSITE_HOST: str = "whois.nic.website"
+    # WEBSITE_HOST: str = "whois.nic.website"
     ZA_HOST: str = "whois.registry.net.za"
 
     # DNS: The name tld.whois-servers.net is a CNAME to the appropriate whois-server.
@@ -139,21 +138,15 @@ class PyWhoisClient:
     #  just something done on a best effort case.
 
     # ----------------------------------------
-    QNICHOST_HEAD: str = "whois.nic." # try whois.nic.<tld>
-    QNICHOST_TAIL: str = ".whois-servers.net" # try <tld>.whois-server.net
+    QNICHOST_HEAD: str = "whois.nic."  # try whois.nic.<tld>
+    QNICHOST_TAIL: str = ".whois-servers.net"  # try <tld>.whois-server.net
 
     # ----------------------------------------
     WHOIS_RECURSE: int = 0x01
     WHOIS_QUICK: int = 0x02
 
     # ----------------------------------------
-    ip_whois: List[str] = [
-        LNIC_HOST,
-        RNIC_HOST,
-        PNIC_HOST,
-        BNIC_HOST,
-        PANDI_HOST,
-    ]
+    # ip_whois: List[str] = [LNIC_HOST, RNIC_HOST, PNIC_HOST, BNIC_HOST, PANDI_HOST]
 
     # ----------------------------------------
     verbose: bool = False
@@ -174,58 +167,54 @@ class PyWhoisClient:
         if self.verbose:
             print(inspect.currentframe().f_code.co_name, file=sys.stderr)
 
+        # we can remove anythging that works via whois.nic.<tld> or
         table: Dict[str, str] = {
-            "ai": self.AI_HOST,
-            "app": self.APP_HOST,
-            "ar": self.AR_HOST,
+            # "ai": self.AI_HOST,
+            # "app": self.APP_HOST,
+            # "ar": self.AR_HOST,
             "bw": self.BW_HOST,
             "by": self.BY_HOST,
-            "bz": self.RU_HOST,  # ??
             "ca": self.CA_HOST,
-            "chat": self.CHAT_HOST,
-            "city": self.RU_HOST,  # ??
-            "cl": self.CL_HOST,
-            "cr": self.CR_HOST,
+            # "chat": self.CHAT_HOST,
+            # "cl": self.CL_HOST,
+            # "cr": self.CR_HOST,
             "de": self.DE_HOST,
-            "design": self.RU_HOST,  # ??
-            "dev": self.DEV_HOST,
+            # "dev": self.DEV_HOST,
             "direct": self.IDS_HOST,
-            "do": self.DO_HOST,
+            # "do": self.DO_HOST,
             "fashion": self.GDD_HOST,
-            "games": self.GAMES_HOST,
-            "google": self.GOOGLE_HOST,
-            "goog": self.GOOGLE_HOST,
-            "group": self.GROUP_HOST,
-            # "group": self.IDS_HOST, # is double in the original code
+            # "games": self.GAMES_HOST,
+            # "google": self.GOOGLE_HOST,
+            # "goog": self.GOOGLE_HOST,
             "hk": self.HK_HOST,
-            "hn": self.HN_HOST,
+            # "hn": self.HN_HOST,
             "immo": self.IDS_HOST,
             "ist": self.IST_HOST,
-            "jobs": self.JOBS_HOST,
+            # "jobs": self.JOBS_HOST,
             "jp": self.JP_HOST,
-            "kz": self.KZ_HOST,
-            "lat": self.LAT_HOST,
+            # "kz": self.KZ_HOST,
+            # "lat": self.LAT_HOST,
             "life": self.IDS_HOST,
-            "li": self.LI_HOST,
+            # "li": self.LI_HOST,
             "lt": self.LT_HOST,
-            "market": self.MARKET_HOST,
-            "money": self.MONEY_HOST,
+            # "market": self.MARKET_HOST,
+            # "money": self.MONEY_HOST,
             "mx": self.MX_HOST,
             "ng": self.NG_HOST,
             "nl": self.NL_HOST,
-            "online": self.ONLINE_HOST,
-            "ooo": self.OOO_HOST,
-            "page": self.PAGE_HOST,
+            # "online": self.ONLINE_HOST,
+            # "ooo": self.OOO_HOST,
+            # "page": self.PAGE_HOST,
             "pe": self.PE_HOST,
             "ru": self.RU_HOST,
-            "shop": self.SHOP_HOST,
+            # "shop": self.SHOP_HOST,
             "store": self.STORE_HOST,
             "studio": self.RU_HOST,  # ??
             "style": self.RU_HOST,  # ??
             "su": self.RU_HOST,
             "tn": self.TN_HOST,
             "vip": self.GDD_HOST,
-            "website": self.WEBSITE_HOST,
+            # "website": self.WEBSITE_HOST,
             "xn--80adxhks": self.MOSKVA_HOST,
             "xn--c1avg": self.PIR_HOST,
             "xn--d1acj3b": self.DETI_HOST,
@@ -665,22 +654,6 @@ class PyWhoisClient:
             type="string",
             dest="country",
             help="Lookup using country-specific NIC",
-        )
-        parser.add_option(
-            "-d",
-            "--mil",
-            action="store_const",
-            const=PyWhoisClient.DNIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.DNIC_HOST,
-        )
-        parser.add_option(
-            "-g",
-            "--gov",
-            action="store_const",
-            const=PyWhoisClient.GNIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.GNIC_HOST,
         )
         parser.add_option(
             "-h",
