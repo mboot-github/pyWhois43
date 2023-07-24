@@ -52,6 +52,12 @@ from typing import (
 
 
 class PyWhoisClient:
+    # better lookup directly on iana and cache the results
+    # whois <tld no dot> -h whois.iana.org
+    # ----------------------------------------
+    DEFAULT_PORT_NAME: str = "nicname"  # /etc/services port 43
+    DEFAULT_PORT_NR: int = 43
+    MAX_READ_BUF: int = 4096
     # ----------------------------------------
     ABUSE_HOST: str = "whois.abuse.net"
     AI_HOST: str = "whois.nic.ai"
@@ -65,7 +71,6 @@ class PyWhoisClient:
     CHAT_HOST: str = "whois.nic.chat"
     CL_HOST: str = "whois.nic.cl"
     CR_HOST: str = "whois.nic.cr"
-    DEFAULT_PORT: str = "nicname"
     DE_HOST: str = "whois.denic.de"
     DENIC_HOST: str = "whois.denic.de"
     DETI_HOST: str = "whois.nic.xn--d1acj3b"
@@ -81,7 +86,7 @@ class PyWhoisClient:
     HK_HOST: str = "whois.hkirc.hk"
     HN_HOST: str = "whois.nic.hn"
     HR_HOST: str = "whois.dns.hr"
-    IANA_HOST: str = "whois.iana.org"
+    IANA_HOST: str = "whois.iana.org" # <<=
     IDS_HOST: str = "whois.identitydigital.services"
     INIC_HOST: str = "whois.networksolutions.com"
     IST_HOST: str = "whois.afilias-srs.net"
@@ -120,9 +125,22 @@ class PyWhoisClient:
     WEBSITE_HOST: str = "whois.nic.website"
     ZA_HOST: str = "whois.registry.net.za"
 
+    # DNS: The name tld.whois-servers.net is a CNAME to the appropriate whois-server.
+    # Somewhat unclear who actually maintains this.
+    # from: https://serverfault.com/questions/343941/how-can-i-find-the-whois-server-for-any-tld
+    # 2023-07-23: whois whois-servers.net
+    # [Querying whois.verisign-grs.com]
+    # [Redirected to whois.tucows.com]
+    # [Querying whois.tucows.com]
+    # [whois.tucows.com]
+    # This feature depends on which whois client you use.
+    # Not all of them do that, for good or bad reason.
+    #  whois-servers.net is still not an official service,
+    #  just something done on a best effort case.
+
     # ----------------------------------------
-    QNICHOST_HEAD: str = "whois.nic."
-    QNICHOST_TAIL: str = ".whois-servers.net"
+    QNICHOST_HEAD: str = "whois.nic." # try whois.nic.<tld>
+    QNICHOST_TAIL: str = ".whois-servers.net" # try <tld>.whois-server.net
 
     # ----------------------------------------
     WHOIS_RECURSE: int = 0x01
@@ -145,47 +163,12 @@ class PyWhoisClient:
     flags: int = 0
     quiet: bool = False
     use_qnichost: bool = False
+    data: List[str] = []
 
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
         if self.verbose:
             print(inspect.currentframe().f_code.co_name, file=sys.stderr)
-
-    def findwhois_server(
-        self,
-        response: str,
-        hostname: str,
-        query: str,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
-
-        """
-        Search the initial TLD lookup results
-        for the regional-specific whois server
-        for getting contact details.
-        """
-        match = re.compile(
-            f"Domain Name: {query}" + r"\s*.*?Whois Server: (.*?)\s",
-            flags=re.IGNORECASE | re.DOTALL,
-        ).search(response)
-
-        nhost = None
-        if match:
-            nhost = match.groups()[0]
-            if nhost.count("/") > 0:
-                # if the whois address is domain.tld/something
-                # then s.connect((hostname, 43)) does not work
-                nhost = None
-            return nhost
-
-        if hostname == self.ANIC_HOST:
-            for nichost in self.ip_whois:
-                if response.find(nichost) != -1:
-                    nhost = nichost
-                    break
-
-        return nhost
 
     def maptable(self, tld):
         if self.verbose:
@@ -197,67 +180,103 @@ class PyWhoisClient:
             "ar": self.AR_HOST,
             "bw": self.BW_HOST,
             "by": self.BY_HOST,
+            "bz": self.RU_HOST,  # ??
             "ca": self.CA_HOST,
             "chat": self.CHAT_HOST,
+            "city": self.RU_HOST,  # ??
             "cl": self.CL_HOST,
             "cr": self.CR_HOST,
             "de": self.DE_HOST,
+            "design": self.RU_HOST,  # ??
             "dev": self.DEV_HOST,
+            "direct": self.IDS_HOST,
             "do": self.DO_HOST,
+            "fashion": self.GDD_HOST,
             "games": self.GAMES_HOST,
-            "goog": self.GOOGLE_HOST,
             "google": self.GOOGLE_HOST,
+            "goog": self.GOOGLE_HOST,
             "group": self.GROUP_HOST,
+            # "group": self.IDS_HOST, # is double in the original code
             "hk": self.HK_HOST,
             "hn": self.HN_HOST,
+            "immo": self.IDS_HOST,
             "ist": self.IST_HOST,
             "jobs": self.JOBS_HOST,
             "jp": self.JP_HOST,
             "kz": self.KZ_HOST,
             "lat": self.LAT_HOST,
+            "life": self.IDS_HOST,
             "li": self.LI_HOST,
             "lt": self.LT_HOST,
             "market": self.MARKET_HOST,
             "money": self.MONEY_HOST,
             "mx": self.MX_HOST,
+            "ng": self.NG_HOST,
             "nl": self.NL_HOST,
             "online": self.ONLINE_HOST,
             "ooo": self.OOO_HOST,
             "page": self.PAGE_HOST,
             "pe": self.PE_HOST,
-            "website": self.WEBSITE_HOST,
-            "za": self.ZA_HOST,
             "ru": self.RU_HOST,
-            "bz": self.RU_HOST,
-            "city": self.RU_HOST,
-            "design": self.RU_HOST,
-            "studio": self.RU_HOST,
-            "style": self.RU_HOST,
-            "su": self.RU_HOST,
-            "рус": self.RU_HOST,
-            "xn--p1acf": self.RU_HOST,
-            "direct": self.IDS_HOST,
-            # "group": self.IDS_HOST,
-            "immo": self.IDS_HOST,
-            "life": self.IDS_HOST,
-            "fashion": self.GDD_HOST,
-            "vip": self.GDD_HOST,
             "shop": self.SHOP_HOST,
             "store": self.STORE_HOST,
-            "дети": self.DETI_HOST,
-            "xn--d1acj3b": self.DETI_HOST,
-            "москва": self.MOSKVA_HOST,
-            "xn--80adxhks": self.MOSKVA_HOST,
-            "рф": self.RF_HOST,
-            "xn--p1ai": self.RF_HOST,
-            "орг": self.PIR_HOST,
-            "xn--c1avg": self.PIR_HOST,
-            "ng": self.NG_HOST,
-            "укр": self.UKR_HOST,
-            "xn--j1amh": self.UKR_HOST,
+            "studio": self.RU_HOST,  # ??
+            "style": self.RU_HOST,  # ??
+            "su": self.RU_HOST,
             "tn": self.TN_HOST,
+            "vip": self.GDD_HOST,
+            "website": self.WEBSITE_HOST,
+            "xn--80adxhks": self.MOSKVA_HOST,
+            "xn--c1avg": self.PIR_HOST,
+            "xn--d1acj3b": self.DETI_HOST,
+            "xn--j1amh": self.UKR_HOST,
+            "xn--p1acf": self.RU_HOST,
+            "xn--p1ai": self.RF_HOST,
+            "za": self.ZA_HOST,
+            "дети": self.DETI_HOST,
+            "москва": self.MOSKVA_HOST,
+            "орг": self.PIR_HOST,
+            "рус": self.RU_HOST,
+            "рф": self.RF_HOST,
+            "укр": self.UKR_HOST,
         }
         return table.get(tld)
+
+    def findWhoisServerInResponse(
+        self,
+        response: str,
+        hostname: str,
+        query: str,
+    ):
+        if self.verbose:
+            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+
+        """
+        Search the initial TLD lookup results
+          for the regional-specific whois server
+          for getting contact details.
+        """
+        match = re.compile(
+            f"Domain Name: {query}" + r"\s*.*?Whois Server: (.*?)\s",
+            flags=re.IGNORECASE | re.DOTALL,
+        ).search(response)
+
+        nhost = None
+        if match:
+            nhost = match.groups()[0]
+            if nhost.count("/") > 0:
+                # if the whois address is domain.tld/something
+                # then s.connect((hostname, self.DEFAULT_PORT_NR)) does not work
+                nhost = None
+            return nhost
+
+        if hostname == self.ANIC_HOST:
+            for nichost in self.ip_whois:
+                if response.find(nichost) != -1:
+                    nhost = nichost
+                    break
+
+        return nhost
 
     def makeSocketWithOptionalSocksProxy(self):
         if self.verbose:
@@ -340,104 +359,25 @@ class PyWhoisClient:
 
         return query
 
-    def whois(
+    def testServerExists(
         self,
-        query: str,
-        hostname: str,
-        flags: int,
-        many_results: bool = False,
+        tld: str,
     ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
-
-        """
-        Perform initial lookup with TLD whois server then,
-          if the quick flag is false,
-          search that result for the region-specific whois server
-          and do a lookup there for contact details.
-        If `quiet` is `True`,
-          will not send a message to stderr when a socket error is encountered.
-        """
-
-        s = self.makeSocketWithOptionalSocksProxy()
-        s.settimeout(10)
-
-        response: str = b""
-        query = self.decodeQuery(query)
-        query_bytes = self.makeQueryBytes(
-            hostname,
-            query,
-            many_results,
-        )
-
-        try:
-            # socket.connect in a try.
-            # in order to allow things like:
-            #   looping whois on different domains without stopping on timeouts
-            # see:
-            #   https://stackoverflow.com/questions/25447803/python-socket-connection-exception
-
-            s.connect((hostname, 43))
-            s.send(bytes(query_bytes, "utf-8") + b"\r\n")
-
-            # recv returns bytes
-            while True:
-                d = s.recv(4096)
-                response += d
-                if not d:
-                    break
-
-            s.close()
-
-            response = response.decode("utf-8", "replace")
-
-            if 'with "=xxx"' in response:
-                return self.whois(
-                    query,
-                    hostname,
-                    flags,
-                    many_results=True,
-                )
-
-            nhost = None
-            if flags & self.WHOIS_RECURSE and nhost is None:
-                nhost = self.findwhois_server(
-                    response,
-                    hostname,
-                    query,
-                )
-
-            if nhost is not None:
-                response += self.whois(
-                    query,
-                    nhost,
-                    0,
-                )
-
-            return response
-
-        except socket.error as exc:
-            # 'response' is assigned a value (also a str) even on socket timeout
-            msg = f"Error trying to connect to socket: closing socket - {exc}"
-            print(msg, file=sys.stderr)
-
-            s.close()
-            return f"Socket not responding: {exc}"
-
-    def testServer(self, tld: str):
         if self.verbose:
             print(inspect.currentframe().f_code.co_name, file=sys.stderr)
 
         server = tld + self.QNICHOST_TAIL
         try:
-            socket.gethostbyname(server)
+            socket.gethostbyname(server)  # effectivly force a dns lookup
             return server
         except socket.gaierror:
             # your given host name <server> is invalid (gai stands for getaddrinfo()).
-            server = self.QNICHOST_HEAD + tld
-            return server
+            return self.QNICHOST_HEAD + tld
 
-    def testEndsWith(self, domain: str):
+    def testEndsWith(
+        self,
+        domain: str,
+    ):
         if self.verbose:
             print(inspect.currentframe().f_code.co_name, file=sys.stderr)
 
@@ -455,9 +395,21 @@ class PyWhoisClient:
 
         return None
 
-    def choose_server(
+    def decodeDomain(self, domain: str) -> str:
+        if self.verbose:
+            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+
+        try:
+            domain = self.domain.encode("idna").decode("utf-8")
+        except TypeError:  # py2
+            domain = self.domain.decode("utf-8").encode("idna").decode("utf-8")
+        except AttributeError:  # py3
+            domain = self.domain.decode("utf-8").encode("idna").decode("utf-8")
+
+        return domain
+
+    def chooseServer(
         self,
-        domain,
     ):
         if self.verbose:
             print(inspect.currentframe().f_code.co_name, file=sys.stderr)
@@ -465,13 +417,7 @@ class PyWhoisClient:
         """
         Choose initial lookup NIC host
         """
-        try:
-            domain = domain.encode("idna").decode("utf-8")
-        except TypeError:
-            domain = domain.decode("utf-8").encode("idna").decode("utf-8")
-        except AttributeError:
-            domain = domain.decode("utf-8").encode("idna").decode("utf-8")
-
+        domain = self.decodeDomain(self.domain)
         rr = self.testEndsWith(domain)
         if rr:
             return rr
@@ -488,7 +434,107 @@ class PyWhoisClient:
         if rr is not None:
             return rr
 
-        return self.testServer(tld)
+        return self.testServerExists(tld)
+
+    def doSocketRead(
+        self,
+        s,
+        hostname: str,
+        query_bytes: str,
+    ) -> (str, bool):
+        if self.verbose:
+            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+
+        response: str = b""
+
+        try:
+            # in order to allow things like:
+            #   looping whois on different domains without stopping on timeouts
+            # see:
+            #   https://stackoverflow.com/questions/25447803/python-socket-connection-exception
+
+            s.connect((hostname, self.DEFAULT_PORT_NR))
+            s.send(bytes(query_bytes, "utf-8") + b"\r\n")
+
+            # recv returns bytes
+            while True:
+                d = s.recv(self.MAX_READ_BUF)
+                response += d
+                if not d:
+                    break
+
+            s.close()
+
+            return response.decode("utf-8", "replace"), False
+
+        except socket.error as exc:
+            # 'response' is assigned a value (also a str) even on socket timeout
+            msg = f"Error trying to connect to socket: closing socket - {exc}"
+            print(msg, file=sys.stderr)
+
+            s.close()
+            return f"Socket not responding: {exc}", True
+
+    def whois(
+        self,
+        query: str,
+        hostname: str,
+        flags: int,
+        many_results: bool = False,
+    ):
+        if self.verbose:
+            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+
+        msg = f"[[{query} via {hostname}]]"
+        print(msg)
+
+        """
+        Perform initial lookup with TLD whois server then,
+          if the quick flag is false,
+          search that result for the region-specific whois server
+          and do a lookup there for contact details.
+        If `quiet` is `True`,
+          will not send a message to stderr when a socket error is encountered.
+        """
+
+        s = self.makeSocketWithOptionalSocksProxy()
+        s.settimeout(10)
+
+        query = self.decodeQuery(query)
+        query_bytes = self.makeQueryBytes(
+            hostname,
+            query,
+            many_results,
+        )
+
+        response, final = self.doSocketRead(s, hostname, query_bytes)
+        if final:
+            return response
+
+        if 'with "=xxx"' in response:
+            return self.whois(
+                query,
+                hostname,
+                flags,
+                many_results=True,
+            )
+
+        nhost = None
+        if flags & self.WHOIS_RECURSE and nhost is None:
+            nhost = self.findWhoisServerInResponse(
+                response,
+                hostname,
+                query,
+            )
+
+        if nhost is not None:
+            response += self.whois(
+                query,
+                nhost,
+                0,
+            )
+
+        return response
 
     def initOneQuery(
         self,
@@ -507,13 +553,14 @@ class PyWhoisClient:
 
         self.nichost = None
         self.use_qnichost = False
+        self.data: List[str] = []
 
     def whois_lookup(
         self,
         domain: str = "",
         options: Dict[str, Any] = {},
         flags: int = 0,
-        quiet=False,
+        quiet: bool = False,
     ):
         if self.verbose:
             print(inspect.currentframe().f_code.co_name, file=sys.stderr)
@@ -547,13 +594,13 @@ class PyWhoisClient:
         if self.options.get("country"):
             self.options["country"] + self.QNICHOST_TAIL,
             return self.whois(
-                domain,
+                self.domain,
                 self.options,
                 self.flags,
             )
 
         if self.use_qnichost:
-            self.nichost = self.choose_server(domain)
+            self.nichost = self.chooseServer()
             if self.nichost is None:
                 return ""
 
@@ -569,7 +616,7 @@ class PyWhoisClient:
             self.flags,
         )
 
-    def parse_command_line(
+    def parseMyArgs(
         self,
         argv: Dict[str, str],
     ):
@@ -737,9 +784,7 @@ if __name__ == "__main__":
     flags = 0
 
     nc = PyWhoisClient(verbose=verbose)
-    options, args = nc.parse_command_line(
-        sys.argv,
-    )
+    options, args = nc.parseMyArgs(sys.argv)
     if options.b_quicklookup:
         flags = flags | PyWhoisClient.WHOIS_QUICK
 
