@@ -19,7 +19,13 @@
     ]
 
 [tool.hatch.build]
-    only-packages = true
+    include = [
+        "pyWhois43/*.py",
+        "pyWhois43/*.txt",
+    ]
+    exclude = [
+        ".gitgignore",
+    ]
 
 [tool.hatch.version]
     source = "vcs"
