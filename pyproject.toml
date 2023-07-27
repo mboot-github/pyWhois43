@@ -1,0 +1,32 @@
+[build-system]
+    build-backend = "hatchling.build"
+    requires = ["hatchling", "hatch-vcs"]
+
+[project]
+    name = "pyWhois43"
+    description = "Some test."
+    readme = "README.md"
+    requires-python = ">=3.7"
+    license = "MIT"
+    dynamic = ['version']
+
+    authors = [
+      { name="MaartenBoot"},
+    ]
+
+    maintainers = [
+      { name="Maarten Boot", email="130295084+mboot-github@users.noreply.github.com" },
+    ]
+
+[tool.hatch.build]
+    only-packages = true
+
+[tool.hatch.version]
+    source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+  version-file = "pyWhois43/version.py"
+
+[tool.pylama]
+    max_line_length = 160
+    skip = "*/.pytest_cache/*, */.tox/*, */mypy_cache/*, ./dist, ./docs"

@@ -1,6 +1,10 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# interesting:
+# https://github.com/rfc1036/whois/blob/next/tld_serv_list
+# https://github.com/rfc1036/whois/blob/next/new_gtlds_list
+
 """
 Whois client for python
 
@@ -41,73 +45,46 @@ import re
 import inspect
 
 from typing import (
-    # cast,
-    # Optional,
     List,
     Dict,
-    # Tuple,
     Any,
-    # Callable,
 )
 
 
 class PyWhoisClient:
-    # better lookup directly on iana and cache the results
-    # whois <tld no dot> -h whois.iana.org
     # ----------------------------------------
     DEFAULT_PORT_NAME: str = "nicname"  # /etc/services port 43
     DEFAULT_PORT_NR: int = 43
     MAX_READ_BUF: int = 4096
+    DEFAULT_SOCKET_TIMEOUT: int = 10
     # ----------------------------------------
     ABUSE_HOST: str = "whois.abuse.net"
-    # AI_HOST: str = "whois.nic.ai"
     ANIC_HOST: str = "whois.arin.net"
-    # APP_HOST: str = "whois.nic.google"
-    # AR_HOST: str = "whois.nic.ar"
     BNIC_HOST: str = "whois.registro.br"
     BW_HOST: str = "whois.nic.net.bw"
     BY_HOST: str = "whois.cctld.by"
     CA_HOST: str = "whois.ca.fury.ca"
-    # CHAT_HOST: str = "whois.nic.chat"
-    # CL_HOST: str = "whois.nic.cl"
-    # CR_HOST: str = "whois.nic.cr"
     DE_HOST: str = "whois.denic.de"
     DENIC_HOST: str = "whois.denic.de"
     DETI_HOST: str = "whois.nic.xn--d1acj3b"
-    # DEV_HOST: str = "whois.nic.google"
     DK_HOST: str = "whois.dk-hostmaster.dk"
-    # DNIC_HOST: str = "whois.nic.mil"
-    # DO_HOST: str = "whois.nic.do"
-    # GAMES_HOST: str = "whois.nic.games"
     GDD_HOST: str = "whois.dnrs.godaddy"
-    # GNIC_HOST: str = "whois.nic.gov"
-    # GOOGLE_HOST: str = "whois.nic.google"
     HK_HOST: str = "whois.hkirc.hk"
-    # HN_HOST: str = "whois.nic.hn"
     HR_HOST: str = "whois.dns.hr"
     IANA_HOST: str = "whois.iana.org"  # <<=
     IDS_HOST: str = "whois.identitydigital.services"
     INIC_HOST: str = "whois.networksolutions.com"
     IST_HOST: str = "whois.afilias-srs.net"
-    # JOBS_HOST: str = "whois.nic.jobs"
     JP_HOST: str = "whois.jprs.jp"
-    # KZ_HOST: str = "whois.nic.kz"
-    # LAT_HOST: str = "whois.nic.lat"
-    # LI_HOST: str = "whois.nic.li"
     LNIC_HOST: str = "whois.lacnic.net"
     LT_HOST: str = "whois.domreg.lt"
-    # MARKET_HOST: str = "whois.nic.market"
     MNIC_HOST: str = "whois.ra.net"
-    # MONEY_HOST: str = "whois.nic.money"
     MOSKVA_HOST: str = "whois.registry.nic.xn--80adxhks"
     MX_HOST: str = "whois.mx"
     NG_HOST: str = "whois.nic.net.ng"
     NIC_HOST: str = "whois.crsnic.net"
     NL_HOST: str = "whois.domain-registry.nl"
     NORID_HOST: str = "whois.norid.no"
-    # ONLINE_HOST: str = "whois.nic.online"
-    # OOO_HOST: str = "whois.nic.ooo"
-    # PAGE_HOST: str = "whois.nic.page"
     PANDI_HOST: str = "whois.pandi.or.id"
     PE_HOST: str = "kero.yachay.pe"
     PIR_HOST: str = "whois.publicinterestregistry.org"
@@ -116,12 +93,10 @@ class PyWhoisClient:
     RF_HOST: str = "whois.registry.tcinet.ru"
     RNIC_HOST: str = "whois.ripe.net"
     RU_HOST: str = "whois.nic.ru"
-    # SHOP_HOST: str = "whois.nic.shop"
     SNIC_HOST: str = "whois.6bone.net"
     STORE_HOST: str = "whois.centralnic.com"
     TN_HOST: str = "whois.ati.tn"
     UKR_HOST: str = "whois.dotukr.com"
-    # WEBSITE_HOST: str = "whois.nic.website"
     ZA_HOST: str = "whois.registry.net.za"
 
     # DNS: The name tld.whois-servers.net is a CNAME to the appropriate whois-server.
@@ -146,7 +121,7 @@ class PyWhoisClient:
     WHOIS_QUICK: int = 0x02
 
     # ----------------------------------------
-    # ip_whois: List[str] = [LNIC_HOST, RNIC_HOST, PNIC_HOST, BNIC_HOST, PANDI_HOST]
+    ip_whois: List[str] = [LNIC_HOST, RNIC_HOST, PNIC_HOST, BNIC_HOST, PANDI_HOST]
 
     # ----------------------------------------
     verbose: bool = False
@@ -169,52 +144,29 @@ class PyWhoisClient:
 
         # we can remove anythging that works via whois.nic.<tld> or
         table: Dict[str, str] = {
-            # "ai": self.AI_HOST,
-            # "app": self.APP_HOST,
-            # "ar": self.AR_HOST,
             "bw": self.BW_HOST,
             "by": self.BY_HOST,
             "ca": self.CA_HOST,
-            # "chat": self.CHAT_HOST,
-            # "cl": self.CL_HOST,
-            # "cr": self.CR_HOST,
             "de": self.DE_HOST,
-            # "dev": self.DEV_HOST,
             "direct": self.IDS_HOST,
-            # "do": self.DO_HOST,
             "fashion": self.GDD_HOST,
-            # "games": self.GAMES_HOST,
-            # "google": self.GOOGLE_HOST,
-            # "goog": self.GOOGLE_HOST,
             "hk": self.HK_HOST,
-            # "hn": self.HN_HOST,
             "immo": self.IDS_HOST,
             "ist": self.IST_HOST,
-            # "jobs": self.JOBS_HOST,
             "jp": self.JP_HOST,
-            # "kz": self.KZ_HOST,
-            # "lat": self.LAT_HOST,
             "life": self.IDS_HOST,
-            # "li": self.LI_HOST,
             "lt": self.LT_HOST,
-            # "market": self.MARKET_HOST,
-            # "money": self.MONEY_HOST,
             "mx": self.MX_HOST,
             "ng": self.NG_HOST,
             "nl": self.NL_HOST,
-            # "online": self.ONLINE_HOST,
-            # "ooo": self.OOO_HOST,
-            # "page": self.PAGE_HOST,
             "pe": self.PE_HOST,
             "ru": self.RU_HOST,
-            # "shop": self.SHOP_HOST,
             "store": self.STORE_HOST,
             "studio": self.RU_HOST,  # ??
             "style": self.RU_HOST,  # ??
             "su": self.RU_HOST,
             "tn": self.TN_HOST,
             "vip": self.GDD_HOST,
-            # "website": self.WEBSITE_HOST,
             "xn--80adxhks": self.MOSKVA_HOST,
             "xn--c1avg": self.PIR_HOST,
             "xn--d1acj3b": self.DETI_HOST,
@@ -259,11 +211,11 @@ class PyWhoisClient:
                 nhost = None
             return nhost
 
-        if hostname == self.ANIC_HOST:
+        if hostname == self.ANIC_HOST:  # "whois.arin.net"
             for nichost in self.ip_whois:
                 if response.find(nichost) != -1:
                     nhost = nichost
-                    break
+                    return nhost
 
         return nhost
 
@@ -371,16 +323,19 @@ class PyWhoisClient:
             print(inspect.currentframe().f_code.co_name, file=sys.stderr)
 
         if domain.endswith("-NORID"):
-            return self.NORID_HOST
+            return self.NORID_HOST  # "whois.norid.no"
 
         if domain.endswith("id"):
-            return self.PANDI_HOST
+            return self.PANDI_HOST  # "whois.pandi.or.id"
 
-        if domain.endswith("hr"):
-            return self.HR_HOST
+        # whois.nic.hr now also exists , no need for a special case
+        # if domain.endswith("hr"):
+        #    return self.HR_HOST # "whois.dns.hr"
 
         if domain.endswith(".pp.ua"):
-            return self.PPUA_HOST
+            # https://support.nic.ua/en-us/article/335-pp-ua-domains-restrictions
+            # test with zzz.pp.ua
+            return self.PPUA_HOST  # "whois.pp.ua"
 
         return None
 
@@ -417,7 +372,7 @@ class PyWhoisClient:
 
         tld = domain[-1]
         if tld[0].isdigit():
-            return self.ANIC_HOST
+            return self.ANIC_HOST  # "whois.arin.net"
 
         rr = self.maptable(tld)
         if rr is not None:
@@ -487,7 +442,7 @@ class PyWhoisClient:
         """
 
         s = self.makeSocketWithOptionalSocksProxy()
-        s.settimeout(10)
+        s.settimeout(self.DEFAULT_SOCKET_TIMEOUT)
 
         query = self.decodeQuery(query)
         query_bytes = self.makeQueryBytes(
@@ -560,49 +515,51 @@ class PyWhoisClient:
             flags=flags,
             quiet=quiet,
         )
-
         """
         Main entry point:
-            Perform initial lookup on TLD whois server,
-            or other server to get region-specific whois server,
-            then if quick flag is false,
-            perform a second lookup on the region-specific server for contact records.
+
+        Perform initial lookup on TLD whois server,
+        or other server to get region-specific whois server,
+        then if quick flag is false,
+        perform a second lookup on the region-specific server for contact records.
+
         If `quiet` is `True`,
-            no message will be printed to STDOUT when a socket error is encountered.
+        no message will be printed to STDOUT when a socket error is encountered.
         """
 
-        if (
-            self.options.get("whoishost") is None
-            and self.options.get("country") is None
-        ):
-            self.use_qnichost = True
-            self.options["whoishost"] = self.NIC_HOST
-            if not (self.flags & self.WHOIS_QUICK):
-                self.flags |= self.WHOIS_RECURSE
+        nichost = None
+        # whoud happen when this function is called by other than main
+        if options is None:
+            options = {}
 
-        if self.options.get("country"):
-            self.options["country"] + self.QNICHOST_TAIL,
+        if options.get("country"):
             return self.whois(
-                self.domain,
-                self.options,
-                self.flags,
+                domain,
+                options["country"] + PyWhoisClient.QNICHOST_TAIL,
+                flags=flags,
             )
+
+        if (options.get("whoishost") is None) and (options.get("country") is None):
+            self.use_qnichost = True  # use verisign as default
+            options["whoishost"] = PyWhoisClient.NIC_HOST
+
+            if not (flags & PyWhoisClient.WHOIS_QUICK):
+                flags |= PyWhoisClient.WHOIS_RECURSE
 
         if self.use_qnichost:
-            self.nichost = self.chooseServer()
-            if self.nichost is None:
-                return ""
-
-            return self.whois(
-                self.domain,
-                self.nichost,
-                self.flags,
-            )
+            nichost = self.chooseServer()
+            if nichost:
+                return self.whois(
+                    domain,
+                    nichost,
+                    flags=flags,
+                )
+            return ""
 
         return self.whois(
-            self.domain,
-            self.options["whoishost"],
-            self.flags,
+            domain,
+            options["whoishost"],  # here we possibly use the default we set earlier
+            flags=flags,
         )
 
     def parseMyArgs(
@@ -622,79 +579,7 @@ class PyWhoisClient:
             add_help_option=False,
             usage=usage,
         )
-
-        parser.add_option(
-            "-a",
-            "--arin",
-            action="store_const",
-            const=PyWhoisClient.ANIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.ANIC_HOST,
-        )
-        parser.add_option(
-            "-A",
-            "--apnic",
-            action="store_const",
-            const=PyWhoisClient.PNIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.PNIC_HOST,
-        )
-        parser.add_option(
-            "-b",
-            "--abuse",
-            action="store_const",
-            const=PyWhoisClient.ABUSE_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.ABUSE_HOST,
-        )
-        parser.add_option(
-            "-c",
-            "--country",
-            action="store",
-            type="string",
-            dest="country",
-            help="Lookup using country-specific NIC",
-        )
-        parser.add_option(
-            "-h",
-            "--host",
-            action="store",
-            type="string",
-            dest="whoishost",
-            help="Lookup using specified whois host",
-        )
-        parser.add_option(
-            "-i",
-            "--nws",
-            action="store_const",
-            const=PyWhoisClient.INIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.INIC_HOST,
-        )
-        parser.add_option(
-            "-I",
-            "--iana",
-            action="store_const",
-            const=PyWhoisClient.IANA_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.IANA_HOST,
-        )
-        parser.add_option(
-            "-l",
-            "--lcanic",
-            action="store_const",
-            const=PyWhoisClient.LNIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.LNIC_HOST,
-        )
-        parser.add_option(
-            "-m",
-            "--ra",
-            action="store_const",
-            const=PyWhoisClient.MNIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.MNIC_HOST,
-        )
+        # port
         parser.add_option(
             "-p",
             "--port",
@@ -703,6 +588,28 @@ class PyWhoisClient:
             dest="port",
             help="Lookup using specified tcp port",
         )
+
+        # explicitly request a whoishost <server>
+        parser.add_option(
+            "-h",
+            "--host",
+            action="store",
+            type="string",
+            dest="whoishost",
+            help="Lookup using specified whois host",
+        )
+
+        # explicitly request a country and use: <country>".whois-servers.net as whoishost"
+        parser.add_option(
+            "-c",
+            "--country",
+            action="store",
+            type="string",
+            dest="country",
+            help="Lookup using country-specific NIC",
+        )
+
+        # generic
         parser.add_option(
             "-Q",
             "--quick",
@@ -710,38 +617,7 @@ class PyWhoisClient:
             dest="b_quicklookup",
             help="Perform quick lookup",
         )
-        parser.add_option(
-            "-r",
-            "--ripe",
-            action="store_const",
-            const=PyWhoisClient.RNIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.RNIC_HOST,
-        )
-        parser.add_option(
-            "-R",
-            "--ru",
-            action="store_const",
-            const="ru",
-            dest="country",
-            help="Lookup Russian NIC",
-        )
-        parser.add_option(
-            "-6",
-            "--6bone",
-            action="store_const",
-            const=PyWhoisClient.SNIC_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.SNIC_HOST,
-        )
-        parser.add_option(
-            "-n",
-            "--ina",
-            action="store_const",
-            const=PyWhoisClient.PANDI_HOST,
-            dest="whoishost",
-            help="Lookup using host " + PyWhoisClient.PANDI_HOST,
-        )
+
         parser.add_option(
             "-?",
             "--help",
