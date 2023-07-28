@@ -171,14 +171,17 @@ class IanaRootDbWhoisExtractor:
             for a in nn:
                 if "/domains/root/db/" not in a:
                     continue
-                what:bool = self.fetchOneIanaRootDbTld(a)
+                what: bool = self.fetchOneIanaRootDbTld(a)
                 if what is False:
                     continue
 
                 n += 1
                 if n % sleepTime == 0:
                     if self.verbose:
-                        print(f"sleep {sleepTime} seconds, {n}, {n % sleepTime}", file=sys.stderr)
+                        print(
+                            f"sleep {sleepTime} seconds, {n}, {n % sleepTime}",
+                            file=sys.stderr,
+                        )
                     time.sleep(5)
 
 
