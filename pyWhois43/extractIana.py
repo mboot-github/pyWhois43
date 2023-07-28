@@ -15,6 +15,7 @@ import re
 import tempfile
 import json
 import socket
+import time
 
 import urllib.request
 
@@ -127,12 +128,13 @@ class IanaRootDbWhoisExtractor:
         with open(fPath, "w") as outfile:
             json.dump(self.domains[tld], outfile)
 
-    def fetchOneIanaRootDbTld(self, a: str) -> None:
+    def fetchOneIanaRootDbTld(self, a: str) -> bool:
         self.reportFuncName()
 
+        zz: bool = False
         xTld: Optional[Match[str]] = re.search(r"/domains/root/db/([-\w]+)\.html", a)
         if xTld is None:
-            return
+            return zz
 
         tld = xTld[1]
         self.domains[tld] = {"url": "https://www.iana.org" + a}
@@ -143,29 +145,41 @@ class IanaRootDbWhoisExtractor:
         if not os.path.exists(jPath):  # if older then (48 hours + random) refresh
             self.fetchOneRootInfo(tld)
             self.writeTldJsonFile(tld)
+            zz = True
         else:
             try:
                 with open(jPath) as f:
                     self.domains[tld] = json.load(f)
             except Exception as e:
                 print(f"{tld}, {jPath}, {e}", file=sys.stderr)
-                return
+                return zz
 
         if self.domains[tld].get("whois"):
             print(f"dns verify: {tld}, {self.domains[tld].get('whois')}")
             self.verifyWhoisServer(tld)
 
-    def fetchAllIanaRootDB(self) -> None:
+        return zz
+
+    def fetchAllIanaRootDB(self, sleepTime: int = 10) -> None:
         self.reportFuncName()
 
         url = self.URL
         with urllib.request.urlopen(url) as response:
             html = response.read()
             nn = re.findall(r'<a\s+href="([^"]+)">', str(html))
+            n: int = 0
             for a in nn:
                 if "/domains/root/db/" not in a:
                     continue
-                self.fetchOneIanaRootDbTld(a)
+                what:bool = self.fetchOneIanaRootDbTld(a)
+                if what is False:
+                    continue
+
+                n += 1
+                if n % sleepTime == 0:
+                    if self.verbose:
+                        print(f"sleep {sleepTime} seconds, {n}, {n % sleepTime}", file=sys.stderr)
+                    time.sleep(5)
 
 
 if __name__ == "__main__":

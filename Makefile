@@ -19,6 +19,7 @@ build:
 	# actually the resulting files in dist are lowercase
 	# tar tvzf dist/$(WHAT_LOWER)-$$(hatch version ).tar.gz
 	unzip -v dist/$(WHAT_LOWER)-$$( hatch version )-py3-none-any.whl
+
 test:
 	pip3 install dist/testpy-1.0.0-py3-none-any.whl
 
