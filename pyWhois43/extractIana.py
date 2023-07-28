@@ -4,12 +4,13 @@
 from typing import (
     Dict,
     Any,
-    # Optional,
+    # List,
+    Match,
+    Optional,
 )
 
 import sys
 import os
-import inspect
 import re
 import tempfile
 import json
@@ -28,19 +29,33 @@ class IanaRootDbWhoisExtractor:
     verbose: bool = False
     domains: Dict[str, Any] = {}
 
-    def makeCacheBase(self) -> None:
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    def reportFuncName(self) -> None:
+        if not self.verbose:
+            return
 
-        aa = [tempfile.gettempdir(), __class__.__name__, "tld"]
+        frame = sys._getframe(1)
+        if frame is None:
+            return
+
+        message = (
+            "{} {}".format(
+                frame.f_code.co_filename,
+                frame.f_code.co_name,
+            ),
+        )
+        print(message, file=sys.stderr)
+
+    def makeCacheBase(self) -> None:
+        self.reportFuncName()
+
+        aa = [tempfile.gettempdir(), self.__class__.__name__, "tld"]
         z = ""
         for p in aa:
             z = os.path.join(z, p)
         self.BASE_CACHE_PATH = z
 
     def makePathIfNotExists(self, path: str) -> None:
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+        self.reportFuncName()
 
         if not os.path.exists(path):
             os.makedirs(path)
@@ -48,25 +63,30 @@ class IanaRootDbWhoisExtractor:
     def __init__(self, verbose: bool = False) -> None:
         self.verbose = verbose
 
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+        self.reportFuncName()
 
         self.makeCacheBase()
         self.makePathIfNotExists(self.BASE_CACHE_PATH)
 
     def makeCachePath(self, tld: str) -> None:
+        self.reportFuncName()
+
         directory = tld
         parent_dir = self.BASE_CACHE_PATH
         path = os.path.join(parent_dir, directory)
         os.makedirs(path)
 
-    def extractWhoisServer(self, tld: str, html: str):
+    def extractWhoisServer(self, tld: str, html: str) -> None:
+        self.reportFuncName()
+
         zz = re.findall(r"<b>WHOIS Server:</b> ([-\.\w]+)", str(html))
         if zz:
             whois = zz[0]
             self.domains[tld]["whois"] = whois
 
-    def verifyWhoisServer(self, tld: str):
+    def verifyWhoisServer(self, tld: str) -> None:
+        self.reportFuncName()
+
         whois = self.domains[tld].get("whois")
         if whois:
             try:
@@ -75,8 +95,7 @@ class IanaRootDbWhoisExtractor:
                 print(f"cannot connect to: {whois}, {e}", file=sys.stderr)
 
     def fetchOneRootInfo(self, tld: str) -> None:
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+        self.reportFuncName()
 
         item = self.domains.get(tld)
         if item is None:
@@ -96,9 +115,8 @@ class IanaRootDbWhoisExtractor:
                 whois = zz[0]
                 self.domains[tld]["whois"] = whois
 
-    def writeTldJsonFile(self, tld) -> None:
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    def writeTldJsonFile(self, tld: str) -> None:
+        self.reportFuncName()
 
         pTld = os.path.join(self.BASE_CACHE_PATH, tld)
         self.makePathIfNotExists(pTld)
@@ -110,7 +128,12 @@ class IanaRootDbWhoisExtractor:
             json.dump(self.domains[tld], outfile)
 
     def fetchOneIanaRootDbTld(self, a: str) -> None:
-        xTld = re.search(r"/domains/root/db/([-\w]+)\.html", a)
+        self.reportFuncName()
+
+        xTld: Optional[Match[str]] = re.search(r"/domains/root/db/([-\w]+)\.html", a)
+        if xTld is None:
+            return
+
         tld = xTld[1]
         self.domains[tld] = {"url": "https://www.iana.org" + a}
 
@@ -133,8 +156,7 @@ class IanaRootDbWhoisExtractor:
             self.verifyWhoisServer(tld)
 
     def fetchAllIanaRootDB(self) -> None:
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+        self.reportFuncName()
 
         url = self.URL
         with urllib.request.urlopen(url) as response:

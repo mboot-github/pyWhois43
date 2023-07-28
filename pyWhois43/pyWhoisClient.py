@@ -42,13 +42,10 @@ import optparse
 import socket
 import sys
 import re
-import inspect
 
-from typing import (
-    List,
-    Dict,
-    Any,
-)
+# import inspect
+
+from typing import List, Dict, Any, Optional, Tuple
 
 
 class PyWhoisClient:
@@ -133,14 +130,28 @@ class PyWhoisClient:
     use_qnichost: bool = False
     data: List[str] = []
 
+    def reportFuncName(self) -> None:
+        if not self.verbose:
+            return
+
+        frame = sys._getframe(1)
+        if frame is None:
+            return
+
+        message = (
+            "{} {}".format(
+                frame.f_code.co_filename,
+                frame.f_code.co_name,
+            ),
+        )
+        print(message, file=sys.stderr)
+
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+        self.reportFuncName()
 
-    def maptable(self, tld):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    def maptable(self, tld: str) -> Optional[str]:
+        self.reportFuncName()
 
         # we can remove anythging that works via whois.nic.<tld> or
         table: Dict[str, str] = {
@@ -188,9 +199,8 @@ class PyWhoisClient:
         response: str,
         hostname: str,
         query: str,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    ) -> Optional[str]:
+        self.reportFuncName()
 
         """
         Search the initial TLD lookup results
@@ -219,17 +229,18 @@ class PyWhoisClient:
 
         return nhost
 
-    def makeSocketWithOptionalSocksProxy(self):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    def makeSocketWithOptionalSocksProxy(self) -> Any:
+        self.reportFuncName()
 
         if "SOCKS" in os.environ:
             try:
-                import socks
+                import socks  # type: ignore
             except ImportError as e:
-                msg = "You need to install the Python socks module. Install PIP "
+                msg: str = (
+                    f"{e}: You need to install the Python socks module. Install PIP "
+                )
                 "(https://bootstrap.pypa.io/get-pip.py) and then 'pip install PySocks'"
-                raise e(msg)
+                raise Exception(msg)
 
             socks_user, socks_password = None, None
             if "@" in os.environ["SOCKS"]:
@@ -268,15 +279,11 @@ class PyWhoisClient:
         return s
 
     def decodeQuery(self, query: str) -> str:
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+        self.reportFuncName()
 
-        try:
-            query = query.decode("utf-8")
-        except UnicodeEncodeError:
-            pass  # Already Unicode (python2's error)
-        except AttributeError:
-            pass  # Already Unicode (python3's error)
+        # You are trying to decode an object that is already decoded.
+        # You have a str, there is no need to decode from UTF-8 anymore.
+        # Simply drop the .decode('utf-8') part:
 
         return query
 
@@ -285,9 +292,8 @@ class PyWhoisClient:
         hostname: str,
         query: str,
         many_results: bool,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    ) -> str:
+        self.reportFuncName()
 
         if hostname == self.DENIC_HOST:
             return "-T dn,ace -C UTF-8 " + query
@@ -303,9 +309,8 @@ class PyWhoisClient:
     def testServerExists(
         self,
         tld: str,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    ) -> str:
+        self.reportFuncName()
 
         server = tld + self.QNICHOST_TAIL
         try:
@@ -318,9 +323,8 @@ class PyWhoisClient:
     def testEndsWith(
         self,
         domain: str,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    ) -> Optional[str]:
+        self.reportFuncName()
 
         if domain.endswith("-NORID"):
             return self.NORID_HOST  # "whois.norid.no"
@@ -339,24 +343,18 @@ class PyWhoisClient:
 
         return None
 
-    def decodeDomain(self, domain: str) -> str:
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    def decodeDomain(
+        self,
+        domain: str,
+    ) -> str:
+        self.reportFuncName()
 
-        try:
-            domain = self.domain.encode("idna").decode("utf-8")
-        except TypeError:  # py2
-            domain = self.domain.decode("utf-8").encode("idna").decode("utf-8")
-        except AttributeError:  # py3
-            domain = self.domain.decode("utf-8").encode("idna").decode("utf-8")
-
-        return domain
+        return str(self.domain.encode("idna"))
 
     def chooseServer(
         self,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    ) -> Optional[str]:
+        self.reportFuncName()
 
         """
         Choose initial lookup NIC host
@@ -366,11 +364,11 @@ class PyWhoisClient:
         if rr:
             return rr
 
-        domain = domain.split(".")
-        if len(domain) < 2:
+        dList: List[str] = domain.split(".")
+        if len(dList) < 2:
             return None
 
-        tld = domain[-1]
+        tld = dList[-1]
         if tld[0].isdigit():
             return self.ANIC_HOST  # "whois.arin.net"
 
@@ -382,14 +380,13 @@ class PyWhoisClient:
 
     def doSocketRead(
         self,
-        s,
+        s: Any,
         hostname: str,
         query_bytes: str,
-    ) -> (str, bool):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    ) -> Tuple[str, bool]:
+        self.reportFuncName()
 
-        response: str = b""
+        response: bytes = b""
 
         try:
             # in order to allow things like:
@@ -409,7 +406,7 @@ class PyWhoisClient:
 
             s.close()
 
-            return response.decode("utf-8", "replace"), False
+            return str(response), False
 
         except socket.error as exc:
             # 'response' is assigned a value (also a str) even on socket timeout
@@ -425,12 +422,11 @@ class PyWhoisClient:
         hostname: str,
         flags: int,
         many_results: bool = False,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    ) -> Optional[str]:
+        self.reportFuncName()
 
         msg = f"[[{query} via {hostname}]]"
-        print(msg)
+        print(msg, file=sys.stderr)
 
         """
         Perform initial lookup with TLD whois server then,
@@ -451,7 +447,11 @@ class PyWhoisClient:
             many_results,
         )
 
-        response, final = self.doSocketRead(s, hostname, query_bytes)
+        response, final = self.doSocketRead(
+            s,
+            hostname,
+            query_bytes,
+        )
         if final:
             return response
 
@@ -472,11 +472,13 @@ class PyWhoisClient:
             )
 
         if nhost is not None:
-            response += self.whois(
+            r2: Optional[str] = self.whois(
                 query,
                 nhost,
                 0,
             )
+            if r2 is not None:
+                response += r2
 
         return response
 
@@ -485,10 +487,9 @@ class PyWhoisClient:
         domain: str,
         options: Dict[str, Any] = {},
         flags: int = 0,
-        quiet=False,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+        quiet: bool = False,
+    ) -> None:
+        self.reportFuncName()
 
         self.domain = domain
         self.options = options
@@ -505,9 +506,8 @@ class PyWhoisClient:
         options: Dict[str, Any] = {},
         flags: int = 0,
         quiet: bool = False,
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+    ) -> Optional[str]:
+        self.reportFuncName()
 
         self.initOneQuery(
             domain=domain,
@@ -564,10 +564,9 @@ class PyWhoisClient:
 
     def parseMyArgs(
         self,
-        argv: Dict[str, str],
-    ):
-        if self.verbose:
-            print(inspect.currentframe().f_code.co_name, file=sys.stderr)
+        argv: List[str],
+    ) -> Any:
+        self.reportFuncName()
 
         """
         Options handling mostly follows the UNIX whois(1) man page,
