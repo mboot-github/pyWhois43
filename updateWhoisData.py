@@ -11,7 +11,7 @@ from urllib.request import urlopen
 WHOIS_NIC_TLD_URL: str = (
     "https://raw.githubusercontent.com/rfc1036/whois/next/new_gtlds_list"
 )
-WHOIS_NIC_TLD_FILE: str = "whois_nic_tld"
+WHOIS_NIC_TLD_FILE: str = "whois_nic_tld.dbm"
 
 
 def updateDbFile() -> None:
