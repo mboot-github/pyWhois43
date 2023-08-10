@@ -21,5 +21,6 @@ build:
 	unzip -v dist/$(WHAT_LOWER)-$$( hatch version )-py3-none-any.whl
 
 test:
-	pip3 install dist/testpy-1.0.0-py3-none-any.whl
+	pip3 uninstall -y pywhois43
+	pip3 install dist/$(WHAT_LOWER)-$$( hatch version )-py3-none-any.whl
 
