@@ -179,6 +179,6 @@ if __name__ == "__main__":
         flags = flags | PyWhoisCli.WHOIS_QUICK
 
     data = nc.whois_lookup(
-        'google.com',
+        "google.com",
     )
     print(data)

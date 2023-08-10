@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
+
 """
-Read the raw file
-and store it in a dbm file
+Read the raw file, and store it in a dbm file
 """
 
 import sys
@@ -33,3 +33,8 @@ if __name__ == "__main__":
                 print(f"{tld}: {s}")
             except Exception as e:
                 print(f"missing tld: {tld} -> {e}", file=sys.stderr)
+
+        for tld in sorted(db.keys()):
+            tld = tld.decode("utf-8")
+            s = db[tld].decode("utf-8")
+            print(f"{tld}: {s}")

@@ -48,28 +48,36 @@ class IanaRootDbWhoisExtractor:
 
     def makeCacheBase(self) -> None:
         self.reportFuncName()
-
+        # /tmp/<className>/tld/<tld>/<tld>.json
         aa = [tempfile.gettempdir(), self.__class__.__name__, "tld"]
         z = ""
         for p in aa:
             z = os.path.join(z, p)
         self.BASE_CACHE_PATH = z
 
-    def makePathIfNotExists(self, path: str) -> None:
+    def makePathIfNotExists(
+        self,
+        path: str,
+    ) -> None:
         self.reportFuncName()
 
         if not os.path.exists(path):
             os.makedirs(path)
 
-    def __init__(self, verbose: bool = False) -> None:
+    def __init__(
+        self,
+        verbose: bool = False,
+    ) -> None:
         self.verbose = verbose
-
         self.reportFuncName()
 
         self.makeCacheBase()
         self.makePathIfNotExists(self.BASE_CACHE_PATH)
 
-    def makeCachePath(self, tld: str) -> None:
+    def makeCachePath(
+        self,
+        tld: str,
+    ) -> None:
         self.reportFuncName()
 
         directory = tld
@@ -85,7 +93,10 @@ class IanaRootDbWhoisExtractor:
             whois = zz[0]
             self.domains[tld]["whois"] = whois
 
-    def verifyWhoisServer(self, tld: str) -> None:
+    def verifyWhoisServer(
+        self,
+        tld: str,
+    ) -> None:
         self.reportFuncName()
 
         whois = self.domains[tld].get("whois")
@@ -95,7 +106,10 @@ class IanaRootDbWhoisExtractor:
             except Exception as e:
                 print(f"cannot connect to: {whois}, {e}", file=sys.stderr)
 
-    def fetchOneRootInfo(self, tld: str) -> None:
+    def fetchOneRootInfo(
+        self,
+        tld: str,
+    ) -> None:
         self.reportFuncName()
 
         item = self.domains.get(tld)
@@ -116,7 +130,10 @@ class IanaRootDbWhoisExtractor:
                 whois = zz[0]
                 self.domains[tld]["whois"] = whois
 
-    def writeTldJsonFile(self, tld: str) -> None:
+    def writeTldJsonFile(
+        self,
+        tld: str,
+    ) -> None:
         self.reportFuncName()
 
         pTld = os.path.join(self.BASE_CACHE_PATH, tld)
@@ -128,7 +145,10 @@ class IanaRootDbWhoisExtractor:
         with open(fPath, "w") as outfile:
             json.dump(self.domains[tld], outfile)
 
-    def fetchOneIanaRootDbTld(self, a: str) -> bool:
+    def fetchOneIanaRootDbTld(
+        self,
+        a: str,
+    ) -> bool:
         self.reportFuncName()
 
         zz: bool = False
@@ -160,7 +180,10 @@ class IanaRootDbWhoisExtractor:
 
         return zz
 
-    def fetchAllIanaRootDB(self, sleepTime: int = 10) -> None:
+    def fetchAllIanaRootDB(
+        self,
+        sleepTime: int = 10,
+    ) -> None:
         self.reportFuncName()
 
         url = self.URL

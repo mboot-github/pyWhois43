@@ -6,6 +6,7 @@ import re
 
 from typing import (
     Any,
+    List,
     Optional,
     Tuple,
 )
@@ -103,8 +104,8 @@ class PyWhoisClient(WhoisHostData):
 
     def makeQueryBytes(
         self,
-        hostname: str,
         query: str,
+        hostname: str,
         many_results: bool,
     ) -> str:
         self.reportFuncName()
@@ -128,21 +129,25 @@ class PyWhoisClient(WhoisHostData):
     ) -> Tuple[str, bool]:
         self.reportFuncName()
 
-        response: bytes = b""
-
         if self.verbose:
-            print(f"{hostname} {self.DEFAULT_PORT_NR}",file=sys.stderr)
+            print(f"{hostname} {self.DEFAULT_PORT_NR}", file=sys.stderr)
 
         try:
             # in order to allow things like:
             #   looping whois on different domains without stopping on timeouts
-            # see:
             #   https://stackoverflow.com/questions/25447803/python-socket-connection-exception
 
             s.connect((hostname, self.DEFAULT_PORT_NR))
             s.send(bytes(query_bytes, "utf-8") + b"\r\n")
 
-            # recv returns bytes
+        except socket.error as exc:
+            msg = f"Error trying to connect to socket: closing socket - {exc}"
+            print(msg, file=sys.stderr)
+            s.close()
+            return f"Socket not responding: {exc}", True
+
+        response: bytes = b""
+        try:
             while True:
                 d = s.recv(self.MAX_READ_BUF)
                 response += d
@@ -150,22 +155,31 @@ class PyWhoisClient(WhoisHostData):
                     break
 
             s.close()
+        except Exception as e:
+            print(f"{e}", file=sys.stderr)
 
-            return response.decode("utf-8"), False
+        return response.decode("utf-8"), False  # allow for partial response
 
-        except socket.error as exc:
-            # 'response' is assigned a value (also a str) even on socket timeout
-            msg = f"Error trying to connect to socket: closing socket - {exc}"
-            print(msg, file=sys.stderr)
+    def haveMatch(self, nhost: str) -> Optional[str]:
 
-            s.close()
-            return f"Socket not responding: {exc}", True
+        if self.verbose:
+            print(f"{nhost}", file=sys.stderr)
+
+        if nhost.count("/") > 0:
+            # if the whois address is domain.tld/something
+            # then s.connect((hostname, self.DEFAULT_PORT_NR)) does not work
+            return None
+
+        if self.verbose:
+            print(f"{nhost}", file=sys.stderr)
+
+        return nhost
 
     def findWhoisServerInResponse(
         self,
-        response: str,
-        hostname: str,
         query: str,
+        hostname: str,
+        response: str,
     ) -> Optional[str]:
         self.reportFuncName()
 
@@ -174,44 +188,48 @@ class PyWhoisClient(WhoisHostData):
           for the regional-specific whois server
           for getting contact details.
         """
-        match = re.compile(
-            f"Domain Name: {query}" + r"\s*.*?Whois Server: (\w+)\s+",
-            flags=re.IGNORECASE | re.DOTALL,
-        ).search(response)
 
-        if self.verbose:
-            print(f"{query} {match}",file=sys.stderr)
+        r1 = f"domain name: {query}"
+        if re.search(r1, response, re.IGNORECASE):
+            r2 = r"\s*.*?whois server:\s*([\.\w]+)"
+            match = re.search(r2, response, re.IGNORECASE)
+            if match:
+                return self.haveMatch(nhost=match.groups()[0])
 
-        nhost = None
-        if match:
-            nhost = match.groups()[0]
-            if self.verbose:
-                print(f"{nhost}",file=sys.stderr)
-
-            if nhost.count("/") > 0:
-                # if the whois address is domain.tld/something
-                # then s.connect((hostname, self.DEFAULT_PORT_NR)) does not work
-                nhost = None
-
-            if self.verbose:
-                print(f"{nhost}",file=sys.stderr)
-
-            return nhost
-
+        nhost: Optional[str] = None
         if hostname == self.ANIC_HOST:  # "whois.arin.net"
             for nichost in self.ip_whois:
                 if response.find(nichost) != -1:
                     nhost = nichost
-
-                    if self.verbose:
-                        print(f"{nhost}",file=sys.stderr)
-
                     return nhost
 
-        if self.verbose:
-            print(f"{nhost}",file=sys.stderr)
-
         return nhost
+
+    def queryAServer(
+        self,
+        query: str,
+        hostname: str,
+        many_results: bool = False,
+    ) -> Tuple[str, bool]:
+        self.reportFuncName()
+
+        if self.verbose:
+            print(f"query: {query}, hostname: {hostname}", file=sys.stderr)
+
+        s = self.makeSocketWithOptionalSocksProxy()
+        s.settimeout(self.DEFAULT_SOCKET_TIMEOUT)
+
+        query_bytes: str = self.makeQueryBytes(
+            query,
+            hostname,
+            many_results,
+        )
+
+        return self.doSocketRead(
+            s,
+            hostname,
+            query_bytes,
+        )
 
     def whois(
         self,
@@ -219,62 +237,54 @@ class PyWhoisClient(WhoisHostData):
         hostname: str,
         flags: int,
         many_results: bool = False,
-    ) -> Optional[str]:
+    ) -> str:
         self.reportFuncName()
+        data: List[str] = []
 
-        msg = f"[[{query} via {hostname}]]"
-        print(msg, file=sys.stderr)
+        data.append(
+            f"[[query: {query} using {hostname}; flags: {flags}, many: {many_results} ]]"
+        )
+
+        response, final = self.queryAServer(
+            query,
+            hostname,
+            many_results,
+        )
+        data.append(response)
+
+        if final:
+            return "\n".join(data)
 
         """
-        Perform initial lookup with TLD whois server.
         if the quick flag is false:
             search that result for the region-specific whois server,
             and do a lookup there for contact details.
         """
 
-        s = self.makeSocketWithOptionalSocksProxy()
-        s.settimeout(self.DEFAULT_SOCKET_TIMEOUT)
-
-        query_bytes:str = self.makeQueryBytes(
-            hostname,
-            query,
-            many_results,
-        )
-
-        if self.verbose:
-            print(f"{query_bytes}", file=sys.stderr)
-
-        response, final = self.doSocketRead(
-            s,
-            hostname,
-            query_bytes,
-        )
-        if final:
-            return response
-
         if 'with "=xxx"' in response:
-            return self.whois(
+            response = self.whois(
                 query,
                 hostname,
-                flags,
+                flags=flags,
                 many_results=True,
             )
+            data.append(response)
+            return "\n".join(data)
 
         nhost = None
         if flags & self.WHOIS_RECURSE and nhost is None:
             nhost = self.findWhoisServerInResponse(
-                response,
-                hostname,
                 query,
+                hostname,
+                response,
             )
 
         if nhost is not None:
-            r2: Optional[str] = self.whois(
+            response = self.whois(
                 query,
-                nhost,
-                0,
+                hostname=nhost,
+                flags=0,
             )
-            if r2 is not None:
-                response += r2
+            data.append(response)
 
-        return response
+        return "\n".join(data)

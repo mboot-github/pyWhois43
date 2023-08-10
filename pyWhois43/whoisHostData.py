@@ -161,7 +161,7 @@ class WhoisHostData(HasReporting):
     ) -> str:
         self.reportFuncName()
 
-        zz = domain.encode("idna").decode('utf-8')
+        zz = domain.encode("idna").decode("utf-8")
         if self.verbose:
             print(f"{domain}; {zz}", file=sys.stderr)
 
