@@ -1,18 +1,24 @@
-#
-WHAT = pyWhois43
-WHAT_LOWER = pywhois43
-VERSION=$( hatch version )
+WHAT		= pyWhois43
+WHAT_LOWER	= pywhois43
 
-all: simple build
+BLACK		= black --line-length=160
+PYLAMA		= pylama
+MYPY		= mypy --install-types --strict
+
+VERSION		= $( hatch version )
+
+all: simple simpleTest version build
 
 simple:
-	black $(WHAT)
-	pylama $(WHAT)
-	mypy --install-types --strict $(WHAT)
-	# mypy --install-types --strict --no-incremental $(WHAT)
+	$(BLACK) *.py $(WHAT)
+	$(PYLAMA) *.py $(WHAT)
+	$(MYPY) *.py $(WHAT)
 
-	python3 $(WHAT)/pyWhoisClient.py google.com 2>2 | tee 1
+version:
 	hatch version
+
+simpleTest:
+	python3 $(WHAT)/pyWhoisClient.py
 
 build:
 	python -m build

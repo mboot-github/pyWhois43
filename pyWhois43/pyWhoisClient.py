@@ -60,9 +60,7 @@ class PyWhoisClient(WhoisHostData):
             try:
                 import socks  # type: ignore
             except ImportError as e:
-                msg: str = (
-                    f"{e}: You need to install the Python socks module. Install PIP "
-                )
+                msg: str = f"{e}: You need to install the Python socks module. Install PIP "
                 "(https://bootstrap.pypa.io/get-pip.py) and then 'pip install PySocks'"
                 raise Exception(msg)
 
@@ -160,6 +158,32 @@ class PyWhoisClient(WhoisHostData):
 
         return response.decode("utf-8"), False  # allow for partial response
 
+    def queryOneServer(
+        self,
+        query: str,
+        hostname: str,
+        many_results: bool = False,
+    ) -> Tuple[str, bool]:
+        self.reportFuncName()
+
+        if self.verbose:
+            print(f"query: {query}, hostname: {hostname}", file=sys.stderr)
+
+        s = self.makeSocketWithOptionalSocksProxy()
+        s.settimeout(self.DEFAULT_SOCKET_TIMEOUT)
+
+        query_bytes: str = self.makeQueryBytes(
+            query,
+            hostname,
+            many_results,
+        )
+
+        return self.doSocketRead(
+            s,
+            hostname,
+            query_bytes,
+        )
+
     def haveMatch(self, nhost: str) -> Optional[str]:
 
         if self.verbose:
@@ -205,32 +229,6 @@ class PyWhoisClient(WhoisHostData):
 
         return nhost
 
-    def queryAServer(
-        self,
-        query: str,
-        hostname: str,
-        many_results: bool = False,
-    ) -> Tuple[str, bool]:
-        self.reportFuncName()
-
-        if self.verbose:
-            print(f"query: {query}, hostname: {hostname}", file=sys.stderr)
-
-        s = self.makeSocketWithOptionalSocksProxy()
-        s.settimeout(self.DEFAULT_SOCKET_TIMEOUT)
-
-        query_bytes: str = self.makeQueryBytes(
-            query,
-            hostname,
-            many_results,
-        )
-
-        return self.doSocketRead(
-            s,
-            hostname,
-            query_bytes,
-        )
-
     def whois(
         self,
         query: str,
@@ -241,26 +239,23 @@ class PyWhoisClient(WhoisHostData):
         self.reportFuncName()
         data: List[str] = []
 
-        data.append(
-            f"[[query: {query} using {hostname}; flags: {flags}, many: {many_results} ]]"
-        )
-
-        response, final = self.queryAServer(
+        # ---------------------------------
+        meta = f"[[query: {query} using {hostname}; flags: {flags}, many: {many_results} ]]"
+        data.append(meta)
+        response, final = self.queryOneServer(
             query,
             hostname,
             many_results,
         )
         data.append(response)
+        # ---------------------------------
 
         if final:
             return "\n".join(data)
 
-        """
-        if the quick flag is false:
-            search that result for the region-specific whois server,
-            and do a lookup there for contact details.
-        """
-
+        # this redoes the query above,
+        # not sure if that is actually needed still
+        #   rfc1036/whois has no special treatment for "=xxx"
         if 'with "=xxx"' in response:
             response = self.whois(
                 query,
