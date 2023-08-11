@@ -15,6 +15,7 @@ import dbm
 import json
 from typing import (
     Dict,
+    List,
 )
 from urllib.request import urlopen
 
@@ -23,16 +24,19 @@ class WhoisServerUpdater:
     FILE_WHOIS_NIC_TLD = "whois_nic_tld.dbm"
 
     # a simple file one line mentioning the tld
-    URL_WHOIS_NEW_GTLDS_LIST = "https://raw.githubusercontent.com/rfc1036/whois/next/new_gtlds_list"
+    URL_WHOIS_NewGtldsList = "https://raw.githubusercontent.com/rfc1036/whois/next/new_gtlds_list"
 
     # a complicated file .<tld> <optional option> <server or NONE, server may be http> <optional comment starting with #>
-    URL_WHOIS_TLD_SERV_LIST = "https://raw.githubusercontent.com/rfc1036/whois/next/tld_serv_list"
+    URL_WHOIS_TldServList = "https://raw.githubusercontent.com/rfc1036/whois/next/tld_serv_list"
+
+    URL_WHOIS_ServersCharsetList = "https://raw.githubusercontent.com/rfc1036/whois/next/servers_charset_list"
 
     def __init__(
         self,
         verbose: bool = False,
     ) -> None:
         self.verbose = verbose
+        self.serversCharsetList: Dict[str, str] = {}
 
     def getDbFileName(self) -> str:
         return self.FILE_WHOIS_NIC_TLD
@@ -62,9 +66,21 @@ class WhoisServerUpdater:
             data["server"] = server
         self.db[tld] = json.dumps(data)
 
+    def getServersCharsetList(self) -> None:
+        allData: str = self.getAllDataFromUrl(
+            self.URL_WHOIS_ServersCharsetList,
+        )
+
+        for line in allData.split("\n"):
+            line = line.strip()
+            if line == "" or line[0] == "#":
+                continue
+            z = line.split()
+            print(z)
+
     def refreshNewGtldsList(self) -> None:
         allData: str = self.getAllDataFromUrl(
-            self.URL_WHOIS_NEW_GTLDS_LIST,
+            self.URL_WHOIS_NewGtldsList,
         )
 
         with dbm.open(self.getDbFileName(), "c") as self.db:
@@ -78,7 +94,7 @@ class WhoisServerUpdater:
 
     def refreshTldServList(self) -> None:
         allData: str = self.getAllDataFromUrl(
-            self.URL_WHOIS_TLD_SERV_LIST,
+            self.URL_WHOIS_TldServList,
         )
 
         with dbm.open(self.getDbFileName(), "c") as self.db:
@@ -106,8 +122,8 @@ class WhoisServerUpdater:
 
                 self.addOneTldServer(fields[0], fields[1])
 
-
     def refreshAll(self) -> None:
+        self.getServersCharsetList()
         self.refreshNewGtldsList()
         self.refreshTldServList()
 
@@ -128,7 +144,11 @@ if __name__ == "__main__":
             for tld in sorted(db.keys()):
                 s = db[tld]
                 s2: str = s.decode("utf-8")
-                z = tld.decode('utf-8')
+                if isinstance(tld, bytes):
+                    z = tld.decode("utf-8")
+                else:
+                    z = tld
+
                 print(f"{str(z)}: {s2}")
 
     def xMain() -> None:
