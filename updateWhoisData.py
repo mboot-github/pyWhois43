@@ -76,8 +76,40 @@ class WhoisServerUpdater:
                 tld: str = line
                 self.addOneTldServer(tld, f"whois.nic.{tld}")
 
+    def refreshTldServList(self) -> None:
+        allData: str = self.getAllDataFromUrl(
+            self.URL_WHOIS_TLD_SERV_LIST,
+        )
+
+        with dbm.open(self.getDbFileName(), "c") as self.db:
+            for line in allData.split("\n"):
+                line = line.strip()
+                if line == "" or line[0] == "#":
+                    continue
+
+                fields: List[str] = line.split()
+                if fields[0][0] == ".":
+                    fields[0] = fields[0][1:]
+
+                if fields[1].lower() in ["none", "web", "arpa", "ip6"]:
+                    continue
+
+                if "." not in fields[1] and "." in fields[2]:
+                    z = fields[1]
+                    fields[1] = fields[2]
+                    fields[2] = z
+
+                if "." not in fields[1]:
+                    continue
+
+                print(fields)
+
+                self.addOneTldServer(fields[0], fields[1])
+
+
     def refreshAll(self) -> None:
         self.refreshNewGtldsList()
+        self.refreshTldServList()
 
 
 if __name__ == "__main__":
@@ -96,7 +128,8 @@ if __name__ == "__main__":
             for tld in sorted(db.keys()):
                 s = db[tld]
                 s2: str = s.decode("utf-8")
-                print(f"{str(tld)}: {s2}")
+                z = tld.decode('utf-8')
+                print(f"{str(z)}: {s2}")
 
     def xMain() -> None:
         wsu = WhoisServerUpdater()
