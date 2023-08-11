@@ -20,8 +20,13 @@ from urllib.request import urlopen
 
 
 class WhoisServerUpdater:
-    URL_WHOIS_NEW_GTLDS_LIST = "https://raw.githubusercontent.com/rfc1036/whois/next/new_gtlds_list"
     FILE_WHOIS_NIC_TLD = "whois_nic_tld.dbm"
+
+    # a simple file one line mentioning the tld
+    URL_WHOIS_NEW_GTLDS_LIST = "https://raw.githubusercontent.com/rfc1036/whois/next/new_gtlds_list"
+
+    # a complicated file .<tld> <optional option> <server or NONE, server may be http> <optional comment starting with #>
+    URL_WHOIS_TLD_SERV_LIST = "https://raw.githubusercontent.com/rfc1036/whois/next/tld_serv_list"
 
     def __init__(
         self,
@@ -32,30 +37,47 @@ class WhoisServerUpdater:
     def getDbFileName(self) -> str:
         return self.FILE_WHOIS_NIC_TLD
 
-    def getAllData(
+    def getAllDataFromUrl(
         self,
         url: str,
     ) -> str:
         allData: str = urlopen(url).read().decode("utf-8")
         return allData
 
-    def refreshNicTldFile(self) -> None:
-        allData: str = self.getAllData(self.URL_WHOIS_NEW_GTLDS_LIST)
+    def showAllData(
+        self,
+    ) -> None:
+        with dbm.open(self.getDbFileName(), "r") as db:
+            for tld in sorted(db.keys()):
+                s = db[tld]
+                s2: str = s.decode("utf-8")
+                print(f"{str(tld)}: {s2}")
 
-        with dbm.open(self.getDbFileName(), "c") as db:
+    def addOneTldServer(self, tld: str, server: str) -> None:
+        data: Dict[str, str] = {}
+
+        if tld in self.db:
+            data = json.loads(self.db[tld].decode("utf-8"))
+        else:
+            data["server"] = server
+        self.db[tld] = json.dumps(data)
+
+    def refreshNewGtldsList(self) -> None:
+        allData: str = self.getAllDataFromUrl(
+            self.URL_WHOIS_NEW_GTLDS_LIST,
+        )
+
+        with dbm.open(self.getDbFileName(), "c") as self.db:
             for line in allData.split("\n"):
                 line = line.strip()
                 if line == "" or line[0] == "#":
                     continue
 
                 tld: str = line
-                data: Dict[str, str] = {}
+                self.addOneTldServer(tld, f"whois.nic.{tld}")
 
-                if tld in db:
-                    data = json.loads(db[tld].decode("utf-8"))
-                else:
-                    data["server"] = f"whois.nic.{tld}"
-                db[tld] = json.dumps(data)
+    def refreshAll(self) -> None:
+        self.refreshNewGtldsList()
 
 
 if __name__ == "__main__":
@@ -78,7 +100,8 @@ if __name__ == "__main__":
 
     def xMain() -> None:
         wsu = WhoisServerUpdater()
-        wsu.refreshNicTldFile()
+        wsu.refreshAll()
+
         testSimple(wsu)
         showAll(wsu)
 
