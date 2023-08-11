@@ -167,19 +167,14 @@ class WhoisServerUpdater:
 if __name__ == "__main__":
 
     def testSimple(wsu: WhoisServerUpdater) -> None:
-        with dbm.open(wsu.getDbFileName(), "r") as db:
-            for tld in ["aaa", "abc", "zuerich", "none"]:
-                try:
-                    s = db[tld].decode("utf-8")
-                    print(f"{tld}: {s}")
-                except Exception as e:
-                    print(f"missing tld: {tld} -> {e}", file=sys.stderr)
+        for tld in ["aaa", "abc", "zuerich", "none"]:
+            data = wsu.get(tld)
+            print(f"{tld}, {data}")
 
     def xMain() -> None:
         wsu = WhoisServerUpdater()
         wsu.refreshAll()
-
-        testSimple(wsu)
         wsu.showAllData()
+        testSimple(wsu)
 
     xMain()

@@ -388,9 +388,6 @@
 ['xn--yfro4i67o', 'whois.sgnic.sg', '#', 'Singapore,', 'Chinese']
 ['xn--ygbi2ammx', 'whois.pnina.ps', '#', 'Palestinian', 'Territory']
 aaa: {"server": "whois.nic.aaa"}
-abc: {"server": "whois.nic.abc"}
-zuerich: {"server": "whois.nic.zuerich"}
-aaa: {"server": "whois.nic.aaa"}
 aarp: {"server": "whois.nic.aarp"}
 abb: {"server": "whois.nic.abb"}
 abbott: {"server": "whois.nic.abbott"}
@@ -1842,3 +1839,7 @@ zip: {"server": "whois.nic.zip"}
 zm: {"server": "whois.zicta.zm"}
 zone: {"server": "whois.nic.zone"}
 zuerich: {"server": "whois.nic.zuerich"}
+aaa, {'server': 'whois.nic.aaa'}
+abc, {'server': 'whois.nic.abc'}
+zuerich, {'server': 'whois.nic.zuerich'}
+none, {}
