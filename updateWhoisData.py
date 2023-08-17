@@ -41,9 +41,38 @@ class WhoisServerUpdater:
     ) -> None:
         self.verbose = verbose
         self.serversCharsetList: Dict[str, str] = {}
+        self.charHintMap : Dict[str,str] = {}
 
     def getDbFileName(self) -> str:
         return self.FILE_WHOIS_NIC_TLD
+
+    def getRaw(self, keyString: str) -> Optional[str]:
+        with dbm.open(self.getDbFileName(), "r") as db:
+            try:
+                if keyString in db:
+                    return db[keyString].decode("utf-8")
+            except Exception as e:
+                print(f"error for: {keyString} -> {e}", file=sys.stderr)
+
+            return None
+
+    def exists(self, keyString: str) -> bool:
+        with dbm.open(self.getDbFileName(), "r") as db:
+            return keyString in db
+
+    def get(self, keyString: str) -> Dict[str, str]:
+        data = self.getRaw(keyString)
+        if data is None:
+            return {}
+
+        s = json.loads(data)
+
+        return cast(Dict[str, str], s)
+
+    def put(self, keyString: str, data: Dict[str, str]) -> Dict[str, str]:
+        with dbm.open(self.getDbFileName(), "c") as db:
+            db[keyString] = json.dumps(data)
+        return data
 
     def getAllDataFromUrl(
         self,
@@ -59,10 +88,12 @@ class WhoisServerUpdater:
             for tld in sorted(db.keys()):
                 s = db[tld]
                 s2: str = s.decode("utf-8")
+
                 if isinstance(tld, bytes):
                     z = tld.decode("utf-8")
                 else:
                     z = str(tld)
+
                 print(f"{str(z)}: {s2}")
 
     def addOneTldServer(self, tld: str, server: str) -> None:
@@ -72,13 +103,30 @@ class WhoisServerUpdater:
             data = self.get(tld)
         else:
             data["server"] = server
-
         self.put(tld, data)
+
+        if server in self.charHintMap:
+            self.addOneServerCharacterSetHint(tld,server,self.charHintMap[server])
+
+
+    def addOneServerCharacterSetHint(self, tld: str, server: str, hint: str) -> None:
+        data: Dict[str, str] = {}
+
+        if self.verbose:
+            print(tld, server, hint)
+
+        if self.exists(tld):
+            data = self.get(tld)
+            if data['server'] == server:
+                data['charSetHint'] = hint
+                self.put(tld, data)
 
     def getServersCharsetList(self) -> None:
         allData: str = self.getAllDataFromUrl(
             self.URL_WHOIS_ServersCharsetList,
         )
+
+        self.charHintMap = {}
 
         for line in allData.split("\n"):
             line = line.strip()
@@ -86,7 +134,12 @@ class WhoisServerUpdater:
                 continue
 
             z = line.split()
-            print(z)
+            self.charHintMap[z[0]] = z[1]
+            if len(z) > 2:
+                self.charHintMap[z[0]] += "; " + " ".join(z[2:])
+
+        if self.verbose:
+            print(self.charHintMap)
 
     def refreshNewGtldsList(self) -> None:
         allData: str = self.getAllDataFromUrl(
@@ -126,7 +179,8 @@ class WhoisServerUpdater:
             if "." not in fields[1]:
                 continue
 
-            print(fields)
+            if self.verbose:
+                print(fields)
 
             self.addOneTldServer(fields[0], fields[1])
 
@@ -134,34 +188,6 @@ class WhoisServerUpdater:
         self.getServersCharsetList()
         self.refreshNewGtldsList()
         self.refreshTldServList()
-
-    def getRaw(self, keyString: str) -> Optional[str]:
-        with dbm.open(self.getDbFileName(), "r") as db:
-            try:
-                if keyString in db:
-                    return db[keyString].decode("utf-8")
-            except Exception as e:
-                print(f"error for: {keyString} -> {e}", file=sys.stderr)
-
-            return None
-
-    def exists(self, keyString: str) -> bool:
-        with dbm.open(self.getDbFileName(), "r") as db:
-            return keyString in db
-
-    def get(self, keyString: str) -> Dict[str, str]:
-        data = self.getRaw(keyString)
-        if data is None:
-            return {}
-
-        s = json.loads(data)
-
-        return cast(Dict[str, str], s)
-
-    def put(self, keyString: str, data: Dict[str, str]) -> Dict[str, str]:
-        with dbm.open(self.getDbFileName(), "c") as db:
-            db[keyString] = json.dumps(data)
-        return data
 
 
 if __name__ == "__main__":
@@ -175,6 +201,6 @@ if __name__ == "__main__":
         wsu = WhoisServerUpdater()
         wsu.refreshAll()
         wsu.showAllData()
-        testSimple(wsu)
+        # testSimple(wsu)
 
     xMain()
